@@ -25,3 +25,30 @@ catalog:
   typescript: ^6.0.3
   typescript-eslint: ^8.71.0
   vitest: ^5.0.3
+
+overrides:
+  '@ai-sdk/provider-utils@>=4.0.0-beta.10 <4.0.33': ^4.0.33
+  '@hono/node-server@<1.19.15': ^1.19.15
+  '@humanfs/node@<0.16.8': ^0.16.8
+  '@modelcontextprotocol/sdk@>=1.12.0 <1.31.0': ^1.31.0
+  ajv@>=7.0.0-alpha.0 <8.18.0: ^8.18.0
+  body-parser@>=2.0.0 <2.3.0: ^2.3.0
+  brace-expansion@>=3.0.0 <5.0.7: ^5.0.7
+  brace-expansion@>=4.0.0 <5.0.12: ^5.0.12
+  fast-uri@>=3.0.0 <3.1.8: ^3.1.8
+  hono@<4.13.7: ^4.13.7
+  http-cache-semantics@<=4.2.0: ^4.3.0
+  ip-address@<=10.7.0: ^10.7.1
+  nanoid@<3.3.18: ^3.3.18
+  path-to-regexp@>=8.0.0 <8.4.0: ^8.4.0
+  postcss@<=8.5.22: ^8.5.23
+  protobufjs@<=7.6.2: ^7.6.3
+  protobufjs@>=7.5.0 <=7.6.4: ^7.6.5
+  proxy-addr@>=1.1.0 <2.0.8: ^2.0.8
+  qs@<6.14.1: ^6.14.1
+  qs@>=2.2.5 <6.16.0: ^6.16.0
+  rollup@>=4.0.0 <4.59.0: ^4.59.0
+  shell-quote@>=1.8.4 <1.11.0: ^1.11.0
+  source-map-js@>=1.0.0 <1.2.2: ^1.2.2
+  undici@>=8.0.0 <8.10.2: ^8.10.2
+  vite@>=7.0.0 <=7.3.4: ^7.3.5
