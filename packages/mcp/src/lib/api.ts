@@ -213,10 +213,12 @@ export async function fetchLibraryContext(
             outcome: "not_found",
           };
         }
-        const MAX_CONTEXT_CHARS = parseInt(process.env.CONTEXT7_MAX_CHARS ?? "50000", 10);
+        const DEFAULT_MAX_CHARS = 50_000;
+        const _envMax = parseInt(process.env.CONTEXT7_MAX_CHARS ?? "", 10);
+        const effectiveMax = isNaN(_envMax) || _envMax <= 0 ? DEFAULT_MAX_CHARS : _envMax;
         const truncated =
-          text.length > MAX_CONTEXT_CHARS
-            ? text.slice(0, MAX_CONTEXT_CHARS) +
+          text.length > effectiveMax
+            ? text.slice(0, effectiveMax) +
               "\n\n[Truncated by context7-fork for safety. Set CONTEXT7_MAX_CHARS env var to adjust.]"
             : text;
         return { data: truncated, outcome: "success" };

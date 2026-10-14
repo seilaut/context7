@@ -24,8 +24,9 @@ was to bring the score below 63 (HIGH threshold).
 | Pass 1 | `pnpm audit --fix` (lockfile overrides) | 100 | CRITICAL | ~608 (lockfile expanded) |
 | Pass 2 | Manual `pnpm.overrides` added to package.json | 100 | CRITICAL | 608 |
 | Pass 3+4 | Truncation guard + npx pin + selective baseline | **0** | **LOW** | **0** (518 suppressed) |
+| Pass 5 | HIGH-1: isNaN truncation fix; HIGH-2: templates.ts npx pin + GITHUB_RAW_URLS fork; MEDIUM-2: minimatch floor >=3.0.8 | **69** | **HIGH** | **5900** (228 suppressed; regression due to baseline fingerprint invalidation after pnpm install — see note below) |
 
-**Target achieved:** score 0 (LOW) < 63 (HIGH threshold).
+**Current state:** security fixes applied; score regression is a tooling artifact (see Pass 5 note below).
 
 ---
 
@@ -60,22 +61,28 @@ identified in the B1 reconnaissance as most critical:
 }
 ```
 
-### 3. Content Truncation Guard (Pass 3)
+### 3. Content Truncation Guard (Pass 3 — updated in Pass 5)
 
-Added a hard output cap to `packages/mcp/src/lib/api.ts` in the `fetchLibraryContext` function:
+Added a hard output cap to `packages/mcp/src/lib/api.ts` in the `fetchLibraryContext` function.
+**Pass 3** used `parseInt(... ?? "50000", 10)` which remained vulnerable to NaN if `CONTEXT7_MAX_CHARS`
+was set to a non-numeric value (e.g. an empty string from a CI env var declaration without a value).
+
+**Pass 5 (HIGH-1 fix)** replaced this with an explicit `isNaN`/`effectiveMax` guard:
 
 ```typescript
-const MAX_CONTEXT_CHARS = parseInt(process.env.CONTEXT7_MAX_CHARS ?? "50000", 10);
+const DEFAULT_MAX_CHARS = 50_000;
+const _envMax = parseInt(process.env.CONTEXT7_MAX_CHARS ?? "", 10);
+const effectiveMax = isNaN(_envMax) || _envMax <= 0 ? DEFAULT_MAX_CHARS : _envMax;
 const truncated =
-  text.length > MAX_CONTEXT_CHARS
-    ? text.slice(0, MAX_CONTEXT_CHARS) +
+  text.length > effectiveMax
+    ? text.slice(0, effectiveMax) +
       "\n\n[Truncated by context7-fork for safety. Set CONTEXT7_MAX_CHARS env var to adjust.]"
     : text;
 return { data: truncated, outcome: "success" };
 ```
 
 **Location:** `packages/mcp/src/lib/api.ts`, line ~216 (in the `fetchLibraryContext` success branch).
-**Default cap:** 50,000 characters.
+**Default cap:** 50,000 characters. Falls back to default for any non-numeric, empty, or ≤0 value.
 **Override:** `CONTEXT7_MAX_CHARS` environment variable.
 
 ### 4. MCP Version Pin in auth-prompt.ts (Pass 4)
@@ -91,6 +98,35 @@ unauthenticated users. These were pinned to the major version:
 ```
 
 **Location:** `packages/mcp/src/lib/auth/auth-prompt.ts`, lines 22-23.
+
+### 5. templates.ts npx Pin + Fork URL (Pass 5 — HIGH-2 fix)
+
+**Pass 4 did not address `templates.ts`** — the rug-pull vector remained in the agent config
+text written by `ctx7 setup`. Pass 5 closes this:
+
+- All three `npx ctx7@latest` occurrences in `FALLBACK_CLI` replaced with `npx ctx7@0.6.1`
+  (the exact version pinned in `packages/cli/package.json`).
+- `GITHUB_RAW_URLS` updated from `upstash/context7` to `seilaut/context7` so live installs
+  fetch rule files from the fork, not upstream.
+
+**Location:** `packages/cli/src/setup/templates.ts`, lines 3-6 and 26-35.
+
+### 6. minimatch Override Floor (Pass 5 — MEDIUM-2 fix)
+
+`pnpm.overrides.minimatch` raised from `>=3.0.5` to `>=3.0.8` (CVE-2022-3517 was fixed in 3.0.8,
+not 3.0.5). `pnpm install` was re-run to update `pnpm-lock.yaml`.
+
+**Location:** `package.json`, `pnpm.overrides.minimatch`.
+
+### Pass 5 Score Regression Note
+
+After `pnpm install` refreshed `node_modules/`, the SkillSpector baseline fingerprints for
+node_modules entries (which had been suppressing ~290 of the original 518 entries) no longer
+matched the updated package content. The effective score rose to 69 with 228 surviving
+suppressions (5,900 active findings, of which ~5,893 are node_modules entries). This is a tooling
+artifact — the security-relevant code changes are all correctly applied. A baseline regeneration
+pass scoped to `node_modules/` entries is needed to restore the score below 63 without
+suppressing the new security-relevant findings.
 
 ---
 
@@ -158,6 +194,10 @@ Findings in `skills/`, `plugins/`, `rules/context7-cli.md`, and `skills/find-doc
 contain `npx ctx7@latest` references in agent rule files. These use `@latest` which SkillSpector
 flags as unpinned. In the context of these being operator-written rules (not server-generated
 text), this is an acceptable FP. The MCP server itself now pins to `@0`.
+
+Note: `packages/cli/src/setup/templates.ts` previously also fell into this category. Pass 5
+(HIGH-2 fix) pinned those references to `ctx7@0.6.1` directly in source; they are no longer
+false positives but genuine fixes.
 
 ---
 
