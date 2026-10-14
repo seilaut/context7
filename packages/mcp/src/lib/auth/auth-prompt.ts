@@ -18,9 +18,10 @@ function buildAuthCommand(
 ): string {
   const flag = clientFlagForCli(clientIde);
   const transportFlag = transport === "stdio" ? " --stdio" : "";
+  // Pin to major version (ctx7@0) to prevent supply-chain rug-pull.
   return flag
-    ? `npx ctx7 setup ${flag} --mcp${transportFlag} -y`
-    : `npx ctx7 setup --mcp${transportFlag}`;
+    ? `npx ctx7@0 setup ${flag} --mcp${transportFlag} -y`
+    : `npx ctx7@0 setup --mcp${transportFlag}`;
 }
 
 function buildElicitMessage(
