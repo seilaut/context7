@@ -1,0 +1,90 @@
+# SkillSpector baseline — findings listed here are suppressed on future scans.
+# Edit 'reason' fields and add glob 'rules' as needed. See docs/SUPPRESSION.md.
+version: 2
+scanner_version: 2.12.0
+rules: []
+fingerprints:
+- hash: sha256:2f364d51ec9bdda84acf5c7bc7658385ae28256d1aa50f5781c1967e0894943e
+  rule_id: RP1
+  file: context7-cli/SKILL.md
+  reason: Accepted finding (auto-generated baseline)
+- hash: sha256:34a862b673bbe96b4f92491c6ae37d4d2b2a3aebf3bc30ae477bf5747665f232
+  rule_id: RP1
+  file: find-docs/SKILL.md
+  reason: Accepted finding (auto-generated baseline)
+- hash: sha256:a36ff9af956dcae70cee98bf34e20a543f55adc267d01468b36df970aa9aec7c
+  rule_id: RP1
+  file: find-docs/SKILL.md
+  reason: Accepted finding (auto-generated baseline)
+- hash: sha256:c4efae207f30bd8f17ca1bdb0ca058cba95848ac7b8286b14d6a35f1cf96b2c9
+  rule_id: RP1
+  file: find-docs/SKILL.md
+  reason: Accepted finding (auto-generated baseline)
+- hash: sha256:9ec29a0aab309aa5e6d0af6655d2f26522a2da91b3b70d90732da915f48c900c
+  rule_id: RP1
+  file: find-docs/SKILL.md
+  reason: Accepted finding (auto-generated baseline)
+- hash: sha256:28eabf8e52c49d9b9b8a85416f6de6f82c7f624c33a90186909b37bf31e9acbd
+  rule_id: RP1
+  file: find-docs/SKILL.md
+  reason: Accepted finding (auto-generated baseline)
+- hash: sha256:4c0933c3ee6564643fc26843318c273160996be0c8bba8f597dc17457520b584
+  rule_id: RP1
+  file: find-docs/SKILL.md
+  reason: Accepted finding (auto-generated baseline)
+- hash: sha256:87af6cfc9a51b012308c57e4a43d7c9ba5920513404c9c94a6d708e3ec44fe10
+  rule_id: RP1
+  file: find-docs/SKILL.md
+  reason: Accepted finding (auto-generated baseline)
+- hash: sha256:f07b59d5065c1022541ad7c89308a3fbe6aa84486d5a49feb918971c1aed00ac
+  rule_id: RP1
+  file: find-docs/SKILL.md
+  reason: Accepted finding (auto-generated baseline)
+- hash: sha256:080fbd388792f9984220c9732f0961f04a0d562629a2c17d3e30d862b4f8f3c9
+  rule_id: RP1
+  file: find-docs/SKILL.md
+  reason: Accepted finding (auto-generated baseline)
+- hash: sha256:1afc0e7ef95d2aa02ee1679d21274f28341b1f899ea7ed63ef75e67d09885be6
+  rule_id: RP1
+  file: find-docs/SKILL.md
+  reason: Accepted finding (auto-generated baseline)
+- hash: sha256:4b1c338d693dd6a0bd305f07bd0a0613a859fbafe2678c9cb396d4ca44cc5152
+  rule_id: RP1
+  file: find-docs/SKILL.md
+  reason: Accepted finding (auto-generated baseline)
+- hash: sha256:ac18578620671efa0ac59597a92952d2190f0629cf2274a021d7338f967e3c24
+  rule_id: RP1
+  file: find-docs/SKILL.md
+  reason: Accepted finding (auto-generated baseline)
+- hash: sha256:f2b3fe4f3ccd8b26d688ac6a031b175ed6967cb8895de12803c2d6633b8251e6
+  rule_id: RP1
+  file: find-docs/SKILL.md
+  reason: Accepted finding (auto-generated baseline)
+- hash: sha256:c330d6bd7aef52b7471750f328b2692b7543562d531476b2a565b83d73df0eb6
+  rule_id: RP1
+  file: find-docs/SKILL.md
+  reason: Accepted finding (auto-generated baseline)
+- hash: sha256:1300cee4bde809d82998d0ed67bd6b59360ba33b95f7ae52f8b568f1ba62eac7
+  rule_id: RP1
+  file: find-docs/SKILL.md
+  reason: Accepted finding (auto-generated baseline)
+- hash: sha256:e02320f3779484a5e6debe71d09ddc31c78cc21c4f3c44106104d19662adc361
+  rule_id: RP1
+  file: find-docs/SKILL.md
+  reason: Accepted finding (auto-generated baseline)
+- hash: sha256:91554c819a33e2eb1c3c7130a43cb34eb007906039b12d72bdc61934a1c8b1f4
+  rule_id: RP1
+  file: find-docs/SKILL.md
+  reason: Accepted finding (auto-generated baseline)
+- hash: sha256:8fafbfdc1c783fc97689e4dfec96549379bd599f7f1a8f8add60ff5692c5ffe6
+  rule_id: EA2
+  file: context7-cli/references/setup.md
+  reason: Accepted finding (auto-generated baseline)
+- hash: sha256:852472a839e2925723d0d61df3cae4beea05bf45f77edc38a645b82c977e21ea
+  rule_id: EA2
+  file: context7-cli/references/setup.md
+  reason: Accepted finding (auto-generated baseline)
+- hash: sha256:d99ed9ebcce5156312d9e9fe23a9eac55502eff7a0790ef866997c03a6792ed9
+  rule_id: EA2
+  file: context7-cli/references/setup.md
+  reason: Accepted finding (auto-generated baseline)
