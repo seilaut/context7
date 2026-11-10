@@ -22,7 +22,7 @@ was to bring the score below 63 (HIGH threshold).
 |------|--------|-------|----------|----------------|
 | Baseline | Upstream clone, no changes | 100 | CRITICAL | 429 |
 | Pass 1 | `pnpm audit --fix` (lockfile overrides) | 100 | CRITICAL | ~608 (lockfile expanded) |
-| Pass 2 | Manual `pnpm.overrides` added to package.json (never applied; see section 2) | 100 | CRITICAL | 608 |
+| Pass 2 | Manual `pnpm.overrides` added to package.json (not recorded in the lockfile; see section 2) | 100 | CRITICAL | 608 |
 | Pass 3+4 | Truncation guard + npx pin + selective baseline | **0** | **LOW** | **0** (518 suppressed) |
 | Pass 5 | HIGH-1: isNaN truncation fix; HIGH-2: templates.ts npx pin + GITHUB_RAW_URLS fork; MEDIUM-2: minimatch floor >=3.0.8 (package.json override; never recorded in the lockfile, see section 6) | 69 | HIGH | 5900 (regression: node_modules fingerprints invalidated by pnpm install) |
 | Pass 6 | Re-scope baseline to `skills/` (node_modules excluded); 21 suppressions | **0** | **LOW** | **0** (21 suppressed) |
@@ -44,12 +44,15 @@ block. These are the overrides pnpm applies. They cover:
   `nanoid`, `path-to-regexp`, `postcss`, `protobufjs`, `proxy-addr`, `qs`, `rollup`, `shell-quote`,
   `source-map-js`, `undici`, `vite`
 
-### 2. Manual pnpm.overrides (Pass 2) — never took effect, since removed
+### 2. Manual pnpm.overrides (Pass 2) — not recorded in the lockfile, since removed
 
 Added explicit floor versions to `package.json` under `pnpm.overrides` for the subset of packages
 identified in the B1 reconnaissance as most critical. They are not recorded in the lockfile: the lockfile's
 `overrides:` block holds only the `pnpm-workspace.yaml` entries, and none of these seven entries is recorded there; `undici` and `path-to-regexp` appear only with different ranges.
-The block was removed from `package.json` (T3.5.4, commit `60187e5`). Historical content:
+What is shown: the `overrides:` block of `pnpm-workspace.yaml` and the one in `pnpm-lock.yaml` are identical,
+and the `package.json` block is in neither. NEXT.md records that `corepack pnpm@10 install --frozen-lockfile`
+failed with ERR_PNPM_LOCKFILE_CONFIG_MISMATCH (2026-11-04); the cause of that mismatch is not established, and a
+frozen install after T3.5.4 will test it. The block was removed from `package.json` (T3.5.4, commit `60187e5`). Historical content:
 
 ```json
 "pnpm": {
@@ -122,24 +125,31 @@ text written by `ctx7 setup`. Pass 5 closes this:
   (the exact version pinned in `packages/cli/package.json`).
 - `GITHUB_RAW_URLS` updated from `upstash/context7` to `seilaut/context7` (commit 0321c7b), so a CLI
   built from this fork fetches rule files (`rules/<name>`) and `skills/find-docs/SKILL.md` /
-  `skills/context7-mcp/SKILL.md` from the fork.
+  `skills/context7-mcp/SKILL.md` from `seilaut/context7` master on GitHub. That master (`origin/master`,
+  as fetched) still says `npx ctx7@latest` (3 times in `rules/context7-cli.md`, 18 in
+  `skills/find-docs/SKILL.md`) until this branch reaches it, which needs a push (not done).
 
-**Reach of the pins (checked 2026-11-10):** `npm view ctx7@0.6.1` shows it was published on 2026-10-13 from
-`upstash/context7` (repository URL; release commit 103b2d4, an ancestor of 0321c7b, so it predates the
-fork's URL change). `npx ctx7@0.6.1 setup` therefore runs upstream's build, which fetches upstream's
+**Reach of the pins (npm facts checked 2026-11-10; upstream file content as of upstream/master fetched 2026-11-04):** `npm view ctx7@0.6.1` shows it was published on 2026-10-13 from
+`upstash/context7` (repository URL). `git log` shows the release commit 103b2d4 (version 0.6.1) is an ancestor of
+0321c7b, so the build predates the fork's URL change. `npx ctx7@0.6.1 setup` therefore runs upstream's build, which fetches upstream's
 rule and skill files from upstash master, and those say `npx ctx7@latest`. The pins in this fork's `skills/`,
 `rules/`, `plugins/` and `auth-prompt.ts` protect agents that load those files directly. Only a CLI built
 from this fork fetches the fork's files. `fetchSetupSkillFiles` accepts only `find-docs` and `context7-mcp`,
 so the CLI never downloads `skills/context7-cli/SKILL.md`.
 
+The `auth-prompt.ts` pin reaches only people who run an MCP server built from this fork. `npm view
+@upstash/context7-mcp repository.url version` shows `git+https://github.com/upstash/context7.git`, version
+4.6.0, so `npx -y @upstash/context7-mcp` most likely runs upstream's npm build, with upstream's prompt (not
+verified by reading that package).
+
 **Location:** `packages/cli/src/setup/templates.ts`, lines 3-6 and 26-35.
 
-### 6. minimatch Override Floor (Pass 5 — MEDIUM-2 fix) — never took effect
+### 6. minimatch Override Floor (Pass 5 — MEDIUM-2 fix) — not recorded in the lockfile
 
 `pnpm.overrides.minimatch` was raised from `>=3.0.5` to `>=3.0.8`. CVE-2022-3517 was fixed in 3.0.5
 (GitHub advisory GHSA-f8q6-p94x-37v3), so the 3.0.5 floor already covered it. The change did not touch
-`pnpm-lock.yaml`, so the lockfile was not updated, and the `package.json` override was never applied (see
-section 2). The only minimatch in the lockfile is 10.2.5.
+`pnpm-lock.yaml`, so the lockfile was not updated, and the `package.json` override is not recorded there (see
+section 2; the cause of the recorded frozen-install mismatch is not established). The only minimatch in the lockfile is 10.2.5.
 
 **Location:** formerly `package.json`, `pnpm.overrides.minimatch` (removed).
 
@@ -162,7 +172,7 @@ surface for an MCP server is the skill instructions and code, not build dependen
 
 ## False Positive Classifications
 
-21 findings are suppressed in `skills/.skillspector-baseline.yaml` (Pass 6 scope). The categories A-D below describe the old whole-repo baseline (518 entries, Pass 3+4), not the current 21. The current 21 are 18 RP1 (17 in `find-docs/SKILL.md`, 1 in `context7-cli/SKILL.md`), in the two files that carried the `npx ctx7@latest` references (not verified that these findings are about those references), and 3 EA2 in `skills/context7-cli/references/setup.md`. I have not verified what EA2 stands for or which lines the 3 EA2 hashes match; that file documents `ctx7 setup`, including writing to `~/.claude/skills` and `--yes` to skip confirmation prompts. All 21 carry the reason "Accepted finding (auto-generated baseline)". The old categories were:
+21 findings are suppressed in `skills/.skillspector-baseline.yaml` (Pass 6 scope: `skills/` only). The categories A-D below describe the old whole-repo baseline (518 entries, Pass 3+4), not the current 21. The current 21 are 18 RP1 (17 in `find-docs/SKILL.md`, 1 in `context7-cli/SKILL.md`), in the two files that carried the `npx ctx7@latest` references (not verified that these findings are about those references), and 3 EA2 in `skills/context7-cli/references/setup.md`. What EA2 stands for is not verified, nor which lines the 3 EA2 hashes match; that file documents `ctx7 setup`, including writing to `~/.claude/skills` and `--yes` to skip confirmation prompts. All 21 carry the reason "Accepted finding (auto-generated baseline)". The old categories were:
 
 ### Category A — Documentation Content (largest group)
 
@@ -222,11 +232,17 @@ shipped to end users and are not executed by an LLM agent.
 
 `skills/`, `rules/context7-cli.md` and `skills/find-docs/SKILL.md` contained `npx ctx7@latest` references
 in agent rule files, which SkillSpector flags as unpinned. These were accepted as false positives in
-Pass 6, but they were real. T3.5.2 (audit H2) pinned them, and the MCP auth prompt and the two plugin
+Pass 6 (the scan covered `skills/` only, so the `rules/` file was outside it), but they were real. T3.5.2 (audit H2) pinned them, and the MCP auth prompt and the two plugin
 READMEs, to `ctx7@0.6.1`, the version in `packages/cli/package.json`. These pins reach agents that load
-this fork's files directly. They do not reach `ctx7 setup` run through npm/npx, which installs upstream's
+this fork's files directly. They do not reach `ctx7 setup` run through npm/npx (checked against upstream/master as fetched 2026-11-04; see section 5), which installs upstream's
 content (see section 5). SkillSpector has not been re-run since (it is not installed on this Mac), so the
 21 baseline fingerprints have not been re-checked against the changed files.
+
+**Open (not pinned, `npx ctx7` or bare `ctx7` shown to people or agents):** the CLI's own help text in
+`packages/cli/src/index.ts` (lines 42-79, version-matched to the CLI that prints it); the bare `ctx7 setup/library/docs/login`
+lines in `skills/context7-cli/references/setup.md` and `docs.md` (they assume an installed binary, not an npx
+download); and the human-facing `README.md`, `packages/cli/README.md`, `i18n/README.zh-CN.md` and `docs/clients/*.mdx`.
+`packages/cli/src/__tests__/agent-facing-pin.test.ts` covers only the seven files it lists.
 
 Note: `packages/cli/src/setup/templates.ts` previously also fell into this category. Pass 5
 (HIGH-2 fix) pinned those references to `ctx7@0.6.1` directly in source; they are no longer

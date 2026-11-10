@@ -5,8 +5,10 @@ import { fileURLToPath } from "url";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../../..");
 
-// Every file that shows an agent a ctx7 command. Each must pin the exact CLI version this
-// repo ships (packages/cli/package.json). Upgrade commands (@latest on purpose) live in
+// The seven files that show an agent a ctx7 command through npx or a download. Each must pin the
+// exact CLI version this repo ships (packages/cli/package.json). Not covered (see REMEDIATION.md,
+// Category E, "Open"): the CLI's own help text, bare `ctx7 ...` lines in skills/context7-cli/references,
+// and human-facing READMEs and docs. Upgrade commands (@latest on purpose) live in
 // src/commands/upgrade.ts and src/utils/update-check.ts and are deliberately not listed.
 const AGENT_FACING_FILES = [
   "rules/context7-cli.md",
@@ -18,6 +20,10 @@ const AGENT_FACING_FILES = [
   "plugins/codex/context7/README.md",
 ];
 
+// An unversioned ctx7 package reference: npx with any flags, or npm/pnpm/yarn global install.
+const UNVERSIONED =
+  /\b(?:npx|pnpm dlx|bunx)\b(?:\s+-{1,2}[\w-]+)*\s+ctx7(?![\w@-])|\b(?:npm|pnpm|yarn)\s+(?:install|i|add)\b[^\n]*\bctx7(?![\w@-])/m;
+
 describe("agent-facing ctx7 commands are pinned to the shipped CLI version", () => {
   test.each(AGENT_FACING_FILES)("%s", async (file) => {
     const version = JSON.parse(
@@ -27,6 +33,6 @@ describe("agent-facing ctx7 commands are pinned to the shipped CLI version", () 
 
     const versions = [...text.matchAll(/ctx7@([^\s"'`)<>,;]+)/g)].map((m) => m[1]);
     for (const v of versions) expect(v).toBe(version);
-    expect(text).not.toMatch(/npx (-y )?ctx7(\s|$)/m);
+    expect(text).not.toMatch(UNVERSIONED);
   });
 });
