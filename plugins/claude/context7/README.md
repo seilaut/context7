@@ -25,7 +25,7 @@ After installing the plugin, restart Claude Code and run:
 
 Select Context7 and follow the browser sign-in flow. No API key is required.
 
-The plugin does not read `CONTEXT7_API_KEY`. To use an API key, for example on a headless, SSH, or CI host, run `npx ctx7 setup --claude` or add the MCP server manually as described in [All MCP Clients](https://context7.com/docs/resources/all-clients).
+The plugin does not read `CONTEXT7_API_KEY`. To use an API key, for example on a headless, SSH, or CI host, run `npx ctx7@0.6.1 setup --claude` or add the MCP server manually as described in [All MCP Clients](https://context7.com/docs/resources/all-clients).
 
 ## Data and Privacy
 
