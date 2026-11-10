@@ -26,3 +26,10 @@ ts	session	event	id	detail	model	evidence
 2026-11-10T08:36:10.786Z	464ce5ce-eeb8-4827-90c9-188b3f9b603d	rollup		pct=8;total=57;done=3		
 2026-11-10T08:36:53.875Z	local	rollup		pct=8;total=57;done=3		
 2026-11-10T08:36:53.907Z	local	direction		state=blocked		
+2026-11-10T08:37:27.759Z	464ce5ce-eeb8-4827-90c9-188b3f9b603d	direction		state=blocked		
+2026-11-10T08:43:36.409Z	464ce5ce-eeb8-4827-90c9-188b3f9b603d	task_done	T1.1.1	criterion passed		run 2026-11-10T08:43:25.912Z
+2026-11-10T08:43:36.421Z	464ce5ce-eeb8-4827-90c9-188b3f9b603d	rollup		pct=17;total=57;done=4		
+2026-11-10T08:44:50.241Z	464ce5ce-eeb8-4827-90c9-188b3f9b603d	task_done	T1.1.2	criterion passed		run 2026-11-10T08:43:36.633Z
+2026-11-10T08:44:50.262Z	464ce5ce-eeb8-4827-90c9-188b3f9b603d	rollup		pct=25;total=57;done=5		
+2026-11-10T08:45:05.497Z	local	rollup		pct=25;total=57;done=5		
+2026-11-10T08:45:05.553Z	local	direction		state=completely blocked		
