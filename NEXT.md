@@ -48,7 +48,7 @@ Rule: `delayed` (a loop or a stall): stop building. Write the loop into Decision
 - T1.1.2's criterion in PLAN.md: offline suites for mcp (through pnpm exec), cli, sdk and pi; the live tools-ai-sdk suite is T1.1.3
 
 ## Last session — 464ce5ce (seilaut-master), 2026-11-10
-The 2026-11-04 leftovers were committed (28b9af9) under Diego's key-scan exception. Ticked by `--run-ac` on seilaut-master, nothing pushed: T3.5.2, T3.5.3, T3.5.4 (merge cbcca48, ticks f721031) after an opus+haiku panel and two fix rounds; T1.1.1 and T1.1.2 (8a9c03d) after `corepack pnpm@10 install --frozen-lockfile` (exit 0). REMEDIATION.md now says the pins reach agents only through this fork's files after a push, and that `npx ctx7@0.6.1 setup` installs upstream content. T3.1.12 fails with 8 high advisories under packages/mcp (see Blockers). `.worktrees/wave2` and a scratchpad worktree are merged.
+The 2026-11-04 leftovers were committed (28b9af9) under Diego's key-scan exception. Ticked by `--run-ac` on seilaut-master: T3.5.2, T3.5.3, T3.5.4 (merge cbcca48, ticks f721031) after an opus+haiku panel and two fix rounds; T1.1.1 and T1.1.2 (8a9c03d) after `corepack pnpm@10 install --frozen-lockfile` (exit 0). REMEDIATION.md now says the pins reach agents only through this fork's files after a push, and that `npx ctx7@0.6.1 setup` installs upstream content. T3.1.12 fails with 8 high advisories under packages/mcp (see Blockers). `.worktrees/wave2` and a scratchpad worktree are merged. Pushed to origin on 2026-11-10 with Diego's yes for the known key-scan hit; gitleaks clean.
 
 ## History
 Older sessions → `HISTORY.md` (not auto-read). Entries are written by the SessionEnd hook; the agent fills Asked, Decided and Shipped.
