@@ -4,11 +4,11 @@
 
 ## Current position
 <!-- progress:begin -->
-Progress: 0% · Δ +0 since 2026-11-04 · scope 57 tasks (+0) · hours 0.0 · cost $0.00 · plan @db887f0c
+Progress: 8% · Δ +0 since 2026-11-10 · scope 57 tasks (+0) · hours 0.0 · cost $0.00 · plan @2288a28b
 | Initiative | % | Done/Total | State | Open epics |
 |---|---|---|---|---|
 | I4 Direction | 0 | 0/3 | not started | E4.1 |
-| I3 Security | 0 | 0/9 | not started | E3.5, E3.1, E3.4 |
+| I3 Security | 25 | 3/9 | in progress | E3.5, E3.1, E3.4 |
 | I1 Build, test and run | 0 | 0/4 | not started | E1.1 |
 | I2 Test stage | 0 | 0/0 | dropped | — |
 Dropped epics (left out of the mean): E3.2, E3.3, E2.1
@@ -17,7 +17,7 @@ On 2026-11-04 the audit and plan were written (docs/audit/2026-11-04-audit.md; P
 
 ## Direction
 <!-- direction:begin -->
-State: blocked · left: 16 (ready 5, queued 1, waiting 10) · verified this session: — · reopened: none · flat sessions: 0 · ledger @0
+State: blocked · left: 13 (ready 2, queued 1, waiting 10) · verified this session: — · reopened: none · flat sessions: 0 · ledger @3
 Reasons: waiting on Diego (blocker): T4.1.1, T4.1.2, T4.1.3, T3.5.1 (after T4.1.3), T3.1.2 (after T4.1.3) +3 more; waiting on Diego (approval): T3.4.1, T1.1.3
 <!-- direction:end -->
 Rule: when the state is circling, stop building. Write the loop into Decisions (what was tried, why it failed its criterion). Choose one: split the task, change the approach with a named hypothesis, or raise a blocker for Diego. No new attempt until that is written.
