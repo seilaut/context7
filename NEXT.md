@@ -17,7 +17,8 @@ On 2026-11-04 the audit and plan were written (docs/audit/2026-11-04-audit.md; P
 
 ## Direction
 <!-- direction:begin -->
-State: forward · verified this session: — · reopened: none · flat sessions: 0 · ledger @0
+State: blocked · left: 16 (ready 5, queued 1, waiting 10) · verified this session: — · reopened: none · flat sessions: 0 · ledger @0
+Reasons: waiting on Diego (blocker): T4.1.1, T4.1.2, T4.1.3, T3.5.1 (after T4.1.3), T3.1.2 (after T4.1.3) +3 more; waiting on Diego (approval): T3.4.1, T1.1.3
 <!-- direction:end -->
 Rule: when the state is circling, stop building. Write the loop into Decisions (what was tried, why it failed its criterion). Choose one: split the task, change the approach with a named hypothesis, or raise a blocker for Diego. No new attempt until that is written.
 
