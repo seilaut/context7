@@ -10,7 +10,7 @@
 
 ## Purpose
 
-This fork remediates the [SkillSpector](https://github.com/upstash/context7) scan findings that prevented
+This fork remediates the SkillSpector scan findings that prevented
 `upstash/context7` from being used as a Claude Code MCP server in the Sei Laut workspace. The target
 was to bring the score below 63 (HIGH threshold).
 
@@ -22,10 +22,10 @@ was to bring the score below 63 (HIGH threshold).
 |------|--------|-------|----------|----------------|
 | Baseline | Upstream clone, no changes | 100 | CRITICAL | 429 |
 | Pass 1 | `pnpm audit --fix` (lockfile overrides) | 100 | CRITICAL | ~608 (lockfile expanded) |
-| Pass 2 | Manual `pnpm.overrides` added to package.json | 100 | CRITICAL | 608 |
+| Pass 2 | Manual `pnpm.overrides` added to package.json (never applied; see section 2) | 100 | CRITICAL | 608 |
 | Pass 3+4 | Truncation guard + npx pin + selective baseline | **0** | **LOW** | **0** (518 suppressed) |
 | Pass 5 | HIGH-1: isNaN truncation fix; HIGH-2: templates.ts npx pin + GITHUB_RAW_URLS fork; MEDIUM-2: minimatch floor >=3.0.8 | 69 | HIGH | 5900 (regression: node_modules fingerprints invalidated by pnpm install) |
-| Pass 6 | Re-scope baseline to `skills/` (node_modules excluded); 22 suppressions | **0** | **LOW** | **0** (22 suppressed) |
+| Pass 6 | Re-scope baseline to `skills/` (node_modules excluded); 21 suppressions | **0** | **LOW** | **0** (21 suppressed) |
 
 **Current state:** ✅ Score 0/LOW — target < 63 achieved. Baseline in `skills/.skillspector-baseline.yaml`.
 
@@ -35,18 +35,21 @@ was to bring the score below 63 (HIGH threshold).
 
 ### 1. Supply Chain — pnpm audit fix (Pass 1)
 
-`pnpm audit --fix` was run to auto-resolve 26 CVEs in the transitive dependency tree. The lockfile
-(`pnpm-lock.yaml`) was updated with version-range overrides covering:
+`pnpm audit --fix` was run to auto-resolve 26 CVEs in the transitive dependency tree. The result is
+the `overrides:` block of `pnpm-workspace.yaml`, which `pnpm-lock.yaml` mirrors in its own `overrides:`
+block. These are the overrides pnpm applies. They cover:
 
 - `@ai-sdk/provider-utils`, `@hono/node-server`, `@humanfs/node`, `@modelcontextprotocol/sdk`,
   `ajv`, `body-parser`, `brace-expansion`, `fast-uri`, `hono`, `http-cache-semantics`, `ip-address`,
   `nanoid`, `path-to-regexp`, `postcss`, `protobufjs`, `proxy-addr`, `qs`, `rollup`, `shell-quote`,
   `source-map-js`, `undici`, `vite`
 
-### 2. Manual pnpm.overrides (Pass 2)
+### 2. Manual pnpm.overrides (Pass 2) — never took effect, since removed
 
 Added explicit floor versions to `package.json` under `pnpm.overrides` for the subset of packages
-identified in the B1 reconnaissance as most critical:
+identified in the B1 reconnaissance as most critical. pnpm did not apply them: the lockfile's
+`overrides:` block holds only the `pnpm-workspace.yaml` entries, and none of these seven appear in it.
+The block was removed from `package.json` (T3.5.4, commit `60187e5`). Historical content:
 
 ```json
 "pnpm": {
@@ -112,12 +115,14 @@ text written by `ctx7 setup`. Pass 5 closes this:
 
 **Location:** `packages/cli/src/setup/templates.ts`, lines 3-6 and 26-35.
 
-### 6. minimatch Override Floor (Pass 5 — MEDIUM-2 fix)
+### 6. minimatch Override Floor (Pass 5 — MEDIUM-2 fix) — never took effect
 
-`pnpm.overrides.minimatch` raised from `>=3.0.5` to `>=3.0.8` (CVE-2022-3517 was fixed in 3.0.8,
-not 3.0.5). `pnpm install` was re-run to update `pnpm-lock.yaml`.
+`pnpm.overrides.minimatch` was raised from `>=3.0.5` to `>=3.0.8`. CVE-2022-3517 was fixed in 3.0.5
+(GitHub advisory GHSA-f8q6-p94x-37v3), so the 3.0.5 floor already covered it. The change did not touch
+`pnpm-lock.yaml`, so the lockfile was not updated, and the `package.json` override was never applied (see
+section 2). The only minimatch in the lockfile is 10.2.5.
 
-**Location:** `package.json`, `pnpm.overrides.minimatch`.
+**Location:** formerly `package.json`, `pnpm.overrides.minimatch` (removed).
 
 ### Pass 5 Score Regression — Resolved in Pass 6
 
@@ -131,14 +136,14 @@ security baseline because: (a) pnpm's zero-byte task-state files block fingerpri
 (b) node_modules CVE coverage is owned by `pnpm audit`, not SkillSpector, and (c) the real threat
 surface for an MCP server is the skill instructions and code, not build dependencies.
 
-**Final score (Pass 6):** `score: 0, severity: LOW` — 0 active findings, 22 suppressed in
+**Final score (Pass 6):** `score: 0, severity: LOW` — 0 active findings, 21 suppressed in
 `skills/.skillspector-baseline.yaml`. Well below the 63/HIGH threshold.
 
 ---
 
 ## False Positive Classifications
 
-22 findings are suppressed in `skills/.skillspector-baseline.yaml` (Pass 6 scope). They fall into these categories:
+21 findings are suppressed in `skills/.skillspector-baseline.yaml` (Pass 6 scope). They fall into these categories:
 
 ### Category A — Documentation Content (largest group)
 
@@ -149,13 +154,13 @@ in the prose, but these are documentation examples, not executable code that cou
 
 **Evidence of FP status:** grep for actual dangerous patterns in `packages/mcp/src/`:
 ```bash
-grep -rn "child_process|execSync|spawnSync" packages/mcp/src/ --include="*.ts"
+grep -rnE "child_process|execSync|spawnSync" packages/mcp/src/ --include="*.ts"
 # → 0 hits
 
-grep -rn "writeFile|appendFile|createWriteStream" packages/mcp/src/ --include="*.ts"
+grep -rnE "writeFile|appendFile|createWriteStream" packages/mcp/src/ --include="*.ts"
 # → 0 hits
 
-grep -rn "require(" packages/mcp/src/ --include="*.ts" | grep -v import
+grep -rnE "require\(" packages/mcp/src/ --include="*.ts" | grep -v import
 # → 0 hits
 ```
 
@@ -244,8 +249,8 @@ git merge upstream/master
 ## Verification Command
 
 ```bash
-# Run from the fork root
-/Users/seilaut/.local/bin/skillspector scan skills/ --no-llm --format json --use-shipped-baseline --output /tmp/verify.json
+# Run from the fork root (skillspector must be on PATH)
+skillspector scan skills/ --no-llm --format json --use-shipped-baseline --output /tmp/verify.json
 jq '{score: .risk_assessment.score, severity: .risk_assessment.severity, active: (.issues | length), suppressed: .suppressed_count}' /tmp/verify.json
-# Expected: score 0, severity LOW, active 0, suppressed 22
+# Expected: score 0, severity LOW, active 0, suppressed 21
 ```
