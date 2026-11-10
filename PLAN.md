@@ -1,43 +1,59 @@
 # PLAN — context7-fork
-Last verified: 2026-11-04 (baseline draft; verify before trusting)
+Last verified: 2026-11-04 (rewritten from docs/audit/2026-11-04-audit.md, the Phase 1 audit; verify before trusting)
 
 ## Why this project exists
-Role: Diego's patched fork of upstash/context7 (fork point 3131245, remediated 2026-10-14 per REMEDIATION.md). The Context7 MCP server that Claude Code runs on this Mac is built from this folder.
-Impact: if it breaks or is compromised, every Claude Code and Codex session loses live library documentation, or worse runs a tampered MCP server with the user's file access.
-Users: Diego's own Claude Code and Codex sessions on this Mac. Nobody else installs from this fork.
-Security: the fork exists to pass the SkillSpector scan (score below 63); dependencies are held at patched versions through pnpm overrides, and the truncation guard and npx pin come from the remediation.
-Usability: the MCP server starts from `packages/mcp/dist/index.js` over stdio and answers a library lookup.
-Threat model: a compromised dependency or a bad upstream merge (supply chain). No end users, no server, no database, no uploads.
+Role: Diego's patched fork of upstash/context7 (fork point 3131245; 6 commits ahead of upstream/master and 101 behind it at 1496b42 on 2026-11-04). Its only documented purpose is to pass Diego's SkillSpector gate (score below 63), so that Context7 can run in his own Claude Code and Codex sessions (REMEDIATION.md:13-15). Any business, client or product use is unknown: no document says (audit (d)).
+Impact: if it breaks or is compromised, those sessions lose live library documentation, or run a tampered MCP server with the user's file access.
+Users: Diego's own sessions; nobody else installs from this fork. On seilaut-master it is not built or registered yet: no node_modules, no packages/mcp/dist, and no context7 entry points here (audit H3).
+Security: the SkillSpector "score 0" rests on suppressing all 21 findings, in skills/ only (audit H1). The npx pins mostly do not pin (H2), and package.json's pnpm.overrides never reached the lockfile (M1). What does protect it today: the lockfile, the pnpm-workspace.yaml overrides, allowBuilds, minimumReleaseAge, and the output cap on documentation.
+Usability: the MCP server starts from packages/mcp/dist/index.js over stdio and answers a library lookup. Not yet true on this Mac.
+Threat model: a compromised dependency, a bad upstream merge, or third-party documentation text that steers the model (prompt injection; audit (c)). No end users, no server, no database, no uploads.
+Order: Diego's decisions come first (E4.1), because they decide whether fork work is kept. Then come the security findings and the build, smallest reversible fixes first.
 
 ## Success criteria
-- S1 The MCP server builds from this fork and its test suites pass — measured by: T1.1.1 and T1.1.2
+- S1 The MCP server builds on this Mac and its offline test suites pass — measured by: T1.1.1, T1.1.2
 - S2 No known high-severity advisory in production dependencies — measured by: T3.1.12
+- S3 What the fork claims about itself is true: exact ctx7 pins, a correct REMEDIATION.md, no dead override config — measured by: T3.5.2, T3.5.3, T3.5.4
+- S4 The repo passes its secret gates — measured by: T3.5.1, T3.1.2, T3.1.3
+- S5 Diego has decided the fork's future, and Context7 runs on this Mac in the form he chose — measured by: T4.1.1, T4.1.2, T4.1.3, T1.1.4
 
-## I1 — Carried work (w 1) — outcome: the fork stays buildable and tested
-### E1.1 — Fork health (w 1) — done when: each task's criterion passes
-- [ ] T1.1.1 The MCP package builds — label: MCP package builds — AC: `pnpm --filter @upstash/context7-mcp build` exit 0 [slow] — evidence: —
-- [ ] T1.1.2 The workspace tests pass — label: Workspace tests pass — AC: `pnpm test` exit 0 [slow] — evidence: —
-
-## I2 — Test stage (w 1) — outcome: every class of test the stack warrants has a runnable criterion
-### E2.1 — Criterion classes (w 1) — done when: each task's criterion passes
-- [-] T2.1.1 Error paths of an area — dropped 2026-11-04: not applicable: a forked library; upstream owns its error-path tests and T1.1.2 runs them
+## I4 — Direction (w 1) — outcome: Diego has decided what this fork is for, so no work goes into a version he will discard
+### E4.1 — Decisions that frame the plan (w 1) — done when: each decision has Diego's dated yes — spec: docs/audit/2026-11-04-audit.md
+- [ ] T4.1.1 Decide the fork's future: (A) keep it and merge upstream (101 commits behind; only pnpm-lock.yaml conflicts), (B) build a plain upstream release from its lockfile, or (C) stop building locally and use the hosted server or a pinned npx — label: Decide the fork's future — AC: Diego approves on <date> — evidence: —
+  Note: the audit's (d) table compares the three options. Follow-ups to add once he decides, all from the audit: for A, merge upstream to 1496b42 (take upstream's lockfile, regenerate the workspace overrides), test the truncation guard (M3), and pin the stdio entry that ctx7 setup writes and the upgrade path (H2, points 3 and 4); for B, check out a release tag and retire the fork patches; for C, retire T1.1.1 and T1.1.2. A rebase would need a force-push; a merge does not.
+- [ ] T4.1.2 Decide whether the SkillSpector rule (score below 63) still stands, and over which scope: skills/ only, as now, or packages/, rules/ and plugins/ too. If it stands, install SkillSpector on this Mac and record a fresh score — label: Decide SkillSpector rule and scope — AC: Diego approves on <date> — evidence: —
+  Note: SkillSpector is not installed on seilaut-master, and REMEDIATION.md's command uses an old-Mac path (audit H1). Installing it is a machine-level install.
+- [ ] T4.1.3 Rule on the upstream placeholders that fail the secret scans: the PEM placeholder at docs/enterprise/integrations/other-git.mdx:71 (key-scan and the guards check) and the 47 placeholder hits in git history (gitleaks). Allowlist them, and say where — label: Rule on upstream placeholders — AC: Diego approves on <date> — evidence: —
+  Note: key-scan's allowlist names ~/.claude paths only; gate.sh exempts a path through a docs/security/allowlist.tsv row approved by Diego; gitleaks would need a .gitleaksignore in this repo (audit B3, M4). Until he rules, every commit and push here stops at key-scan.
 
 ## I3 — Security (w 1) — outcome: every launch check has evidence or Diego's dated yes
-### E3.1 — Static checks (w 1) — done when: the static gate checks pass under --strict — spec: ~/.claude/skills/secure/references/checks.md
+### E3.5 — Findings (w 1) — done when: every finding has a dated yes or a passing criterion — spec: docs/audit/2026-11-04-audit.md
+- [ ] T3.5.1 key-scan passes on this repo, so commits and pushes can pass the secret gate (source: audit B3) — label: Secret gate passes here — AC: `bash ~/.claude/bin/key-scan.sh .` exit 0 [fast] — after: T4.1.3 — evidence: —
+- [ ] T3.5.2 Every ctx7 command the fork shows agents pins the CLI version it ships, and REMEDIATION.md stops calling the major-version pin a pin (source: audit H2) — label: Pin ctx7 to shipped version — AC: `node -e 'const fs=require("fs");const v=require("./packages/cli/package.json").version;const files=["rules/context7-cli.md","skills/find-docs/SKILL.md","skills/context7-cli/SKILL.md","packages/mcp/src/lib/auth/auth-prompt.ts","packages/cli/src/setup/templates.ts"];const bad=[];for(const f of files){const t=fs.readFileSync(f,"utf8");const vs=[...t.matchAll(/ctx7@([^\s"\x27\x60)<>,;]+)/g)].map(m=>m[1]);if(!vs.length)bad.push(f+":none");for(const x of vs)if(x!==v)bad.push(f+":"+x);if(/npx (-y )?ctx7(\s|$)/m.test(t))bad.push(f+":unversioned")}const r=fs.readFileSync("REMEDIATION.md","utf8");if(/pinned to the major version|pins to \x60@0\x60/.test(r))bad.push("REMEDIATION.md:major-pin-claim");console.log(bad.length?"FAIL "+[...new Set(bad)].join(" "):"ok "+v);process.exit(bad.length?1:0)'` exit 0 [fast] — est: 0.5h — evidence: —
+  Note: use the literal version from packages/cli/package.json (0.6.1 today) in rules/context7-cli.md, skills/find-docs/SKILL.md, skills/context7-cli/SKILL.md and packages/mcp/src/lib/auth/auth-prompt.ts, its comment included. The files the CLI downloads take effect only once this reaches the fork's master, which needs a push (class B). The skills/ edits also turn suppressed SkillSpector findings into fixed ones.
+- [ ] T3.5.3 REMEDIATION.md states only what the code and lockfile show (source: audit M1, M5) — label: Correct REMEDIATION.md facts — AC: `node -e 'const t=require("fs").readFileSync("REMEDIATION.md","utf8");const bad=[];if(/fixed in 3\.0\.8/.test(t))bad.push("cve-says-3.0.8");if(!/(fixed|patched) in 3\.0\.5/.test(t))bad.push("cve-3.0.5-missing");if(/\b22 (suppress|findings)/.test(t))bad.push("count-22");if(!/\b21 (suppress|findings)/.test(t))bad.push("count-21-missing");if(/\[SkillSpector\]\(https:\/\/github\.com\/upstash\/context7\)/.test(t))bad.push("wrong-link");if(/grep -rn "[^"\n]*\|/.test(t))bad.push("grep-without-E");if(/\/Users\/seilaut\//.test(t))bad.push("old-mac-path");if(/re-run to update \x60pnpm-lock\.yaml\x60/.test(t))bad.push("rerun-claim");if(!/pnpm-workspace\.yaml/.test(t))bad.push("workspace-overrides-unnamed");console.log(bad.length?"FAIL "+bad.join(" "):"ok");process.exit(bad.length?1:0)'` exit 0 [fast] — est: 0.5h — evidence: —
+  Note: the criterion checks that CVE-2022-3517 reads "fixed in 3.0.5" (GHSA-f8q6-p94x-37v3), not 3.0.8; that the count reads 21, not 22; that the SkillSpector link to upstash/context7, the /Users/seilaut/ path and the claim that pnpm install was re-run are gone; that the evidence greps use -E; and that pnpm-workspace.yaml is named as the home of the overrides that apply. A reviewer checks the rest of the prose.
+- [ ] T3.5.4 Remove the dead pnpm.overrides block from package.json and the root copy of the SkillSpector baseline (source: audit M1, L4) — label: Remove dead override config — AC: `node -e 'const fs=require("fs");const p=JSON.parse(fs.readFileSync("package.json","utf8"));const bad=[];if(p.pnpm&&p.pnpm.overrides)bad.push("package.json:pnpm.overrides");if(fs.existsSync(".skillspector-baseline.yaml"))bad.push("root-baseline-copy");if(!fs.existsSync("skills/.skillspector-baseline.yaml"))bad.push("skills-baseline-missing");if(!/\noverrides:\n/.test(fs.readFileSync("pnpm-workspace.yaml","utf8")))bad.push("workspace-overrides-missing");console.log(bad.length?"FAIL "+bad.join(" "):"ok");process.exit(bad.length?1:0)'` exit 0 [fast] — est: 0.25h — evidence: —
+- [-] T3.5.5 Cap resolve-library-id output and stream the docs body instead of reading it whole (source: audit L1) — dropped 2026-11-04: not worth doing: more fork drift for an unmeasured gain; no response over 50,000 characters has been seen; reopen if one is
+- [-] T3.5.6 Bind HTTP mode to localhost and check Origin and Host (source: audit L2) — dropped 2026-11-04: not worth doing: the fork runs over stdio only, HTTP hardening belongs upstream, and the qs advisory is covered by T3.1.12
+- [-] T3.5.7 Rewrite SECURITY.md for the fork (source: audit L3) — dropped 2026-11-04: not worth doing: nobody else installs from this fork, and editing upstream's file adds merge drift
+### E3.1 — Static checks (w 1) — done when: the static gate checks pass under --strict — spec: ~/.claude/skills/secure/references/checks.md and docs/audit/2026-11-04-audit.md
 - [-] T3.1.1 Row 1: no key shape in tracked files or the built output — dropped 2026-11-04: not applicable: next absent when the initiative was inserted
-- [ ] T3.1.2 Row 1: guards clean and process.env read only in lib/env — label: Guards clean, env isolated — AC: `bash ~/.claude/skills/secure/scripts/gate.sh . --strict --only guards,env_reads` prints "ok":true [fast] — evidence: —
-- [ ] T3.1.3 Row 4: no secret anywhere in git history — label: No secrets in history — AC: `gitleaks detect --no-banner --redact --exit-code 1` exit 0 [slow] — evidence: —
+- [ ] T3.1.2 Row 1: guards clean and process.env read only in lib/env — label: Guards clean, env isolated — AC: `bash ~/.claude/skills/secure/scripts/gate.sh . --strict --only guards,env_reads` prints "ok":true [fast] — after: T4.1.3 — evidence: —
+- [ ] T3.1.3 Row 4: no secret anywhere in git history — label: No secrets in history — AC: `gitleaks detect --no-banner --redact --exit-code 1` exit 0 [slow] — after: T4.1.3 — evidence: —
 - [-] T3.1.4 Row 9: every route handler and server action parses its input with zod — dropped 2026-11-04: not applicable: next absent when the initiative was inserted
-- [ ] T3.1.5 Row 11: no string-built SQL — label: No string-built SQL — AC: `bash ~/.claude/skills/secure/scripts/gate.sh . --strict --only sql_strings` prints "ok":true [fast] — evidence: —
+- [-] T3.1.5 Row 11: no string-built SQL — dropped 2026-11-04: not applicable: there is no SQL in the repo; gate.sh reports sql_strings skipped with no sources, which --run-ac reads as skipped, so the criterion can never tick (audit M4)
 - [-] T3.1.6 Row 12: no console call outside the allowlist, and no-console is an error — dropped 2026-11-04: not applicable: next absent when the initiative was inserted
 - [-] T3.1.7 Row 12: no token, password or email in the last day of the Worker's logs — dropped 2026-11-04: not applicable: no Worker; the fork is a stdio MCP server
 - [-] T3.1.8 Row 15: every route handler and server action re-authorizes — dropped 2026-11-04: not applicable: next absent when the initiative was inserted
 - [-] T3.1.9 Row 15: the Next.js scanner reports no Critical and no High — dropped 2026-11-04: not applicable: next absent when the initiative was inserted
 - [-] T3.1.10 Row 16: no bare select outside the allowlist — dropped 2026-11-04: not applicable: next absent when the initiative was inserted
 - [-] T3.1.11 Row 17: CSP enforced in source, innerHTML only in lib/json-ld.ts — dropped 2026-11-04: not applicable: next absent when the initiative was inserted
-- [ ] T3.1.12 Row 18: no high advisory in production dependencies — label: No high advisories — AC: `pnpm audit --prod --audit-level=high` exit 0 [slow] — evidence: —
+- [ ] T3.1.12 Row 18: no high advisory in production dependencies — label: No high advisories — AC: `COREPACK_ENABLE_DOWNLOAD_PROMPT=0 COREPACK_ENABLE_STRICT=0 corepack pnpm@10 audit --prod --audit-level=high` exit 0 [slow] — evidence: —
+  Note: rewritten 2026-11-04 so it runs without a global pnpm (audit B1). It needs the npm advisory endpoint, so it is not a tonight criterion; offline it fails, never passes. Like the baseline's pnpm form, it differs from the secure template (npm audit --omit=dev).
 - [-] T3.1.13 Row 18: next at or above the 16.4.1 floor — dropped 2026-11-04: not applicable: next absent when the initiative was inserted
-- [ ] T3.1.14 Row 18: vulnerability alerts enabled on the repository — label: Vulnerability alerts on — AC: `gh api -i repos/{owner}/{repo}/vulnerability-alerts | head -1 | grep -q ' 204'` exit 0 [slow] — evidence: —
+- [ ] T3.1.14 Row 18: vulnerability alerts enabled on the repository — label: Vulnerability alerts on — AC: `gh api -i repos/seilaut/context7/vulnerability-alerts | head -1 | grep -q ' 204'` exit 0 [slow] — after: T4.1.1 — evidence: —
+  Note: rewritten 2026-11-04. Here gh resolves {owner}/{repo} to upstash/context7 (remote.upstream.gh-resolved base), so the template form checked upstream's repository (audit M4). Turning the alerts on is a GitHub settings change for Diego, and the check calls the GitHub API with his credentials, so it is not a tonight criterion.
 ### E3.2 — Data checks (w 1) — done when: every SQL check has fresh passing evidence — spec: ~/.claude/skills/secure/references/sql.md
 - [-] T3.2.1 Row 2: RLS on every public table and zero ERROR advisors — dropped 2026-11-04: not applicable: supabase absent when the initiative was inserted
 - [-] T3.2.2 Row 5: sign-ups disabled — dropped 2026-11-04: not applicable: supabase absent when the initiative was inserted
@@ -65,16 +81,20 @@ Threat model: a compromised dependency or a bad upstream merge (supply chain). N
 - [-] T3.3.13 Row 20: the attack run against staging is clean — dropped 2026-11-04: not applicable: next absent when the initiative was inserted
 ### E3.4 — Owned by Diego (w 1) — done when: each human step has his dated yes — spec: ~/.claude/skills/secure/references/checks.md
 - [ ] T3.4.1 Row 4: every key the history scan found is rotated — label: History keys rotated — AC: Diego approves on <date> — evidence: —
+  Note: the audit's full-history scan found 47 hits, all upstream placeholders or test fixtures by shape; none is in Diego's commits, so nothing needs rotating (audit (c)).
 - [-] T3.4.2 Row 7: the rate-limit threshold and the firewall rule are decided — dropped 2026-11-04: not applicable: no routes, uploads or staging; a local stdio MCP server
 - [-] T3.4.3 Row 11: a deep dynamic pass on staging is authorised and its result read — dropped 2026-11-04: not applicable: no routes, uploads or staging; a local stdio MCP server
 - [-] T3.4.4 Row 14: MIME spoofing and malware scanning are accepted as residual risk, or a scanner is chosen — dropped 2026-11-04: not applicable: no routes, uploads or staging; a local stdio MCP server
 - [-] T3.4.5 Row 20: the staging target is authorised in docs/security/targets.tsv and the residual risk of a clean scan is accepted — dropped 2026-11-04: not applicable: no routes, uploads or staging; a local stdio MCP server
 
-<!-- recent git history, for the baseline reviewer:
-b856d68 chore(security): re-scope SkillSpector baseline to skills/ (Pass 6)
-0321c7b fix(security): address code-reviewer HIGH findings — NaN bypass in truncation guard, templates.ts npx pin, minimatch floor
-3f7098a chore(security): regenerate SkillSpector baseline after code patches
-b49bd95 fix(security): truncation guard, npx pin, FP baseline, REMEDIATION.md (B3.3+B3.4)
-9bd00a1 chore(deps): pnpm audit fix + manual pnpm overrides for supply chain CVE remediation
-3131245 CTX7-3147: Name the ask endpoint in the Docs7 docs (#3400)
--->
+## I1 — Build, test and run (w 1) — outcome: the MCP server builds on this Mac, its offline tests pass, and Claude Code runs it in the form Diego chose
+### E1.1 — Fork health (w 1) — done when: each task's criterion passes — spec: docs/audit/2026-11-04-audit.md
+- [ ] T1.1.1 The MCP package builds on this Mac and the built binary starts — label: MCP package builds — AC: `COREPACK_ENABLE_DOWNLOAD_PROMPT=0 COREPACK_ENABLE_STRICT=0 corepack pnpm@10 --filter @upstash/context7-mcp run build && node packages/mcp/dist/index.js --version` exit 0 [slow] — est: 0.25h — evidence: —
+- [ ] T1.1.2 The offline test suites pass against a fresh MCP build: mcp (with its stdio and HTTP integration tests), cli, sdk and pi — label: Offline test suites pass — AC: `COREPACK_ENABLE_DOWNLOAD_PROMPT=0 COREPACK_ENABLE_STRICT=0 corepack pnpm@10 --filter @upstash/context7-mcp run build && COREPACK_ENABLE_DOWNLOAD_PROMPT=0 COREPACK_ENABLE_STRICT=0 corepack pnpm@10 --filter @upstash/context7-mcp exec vitest run && COREPACK_ENABLE_DOWNLOAD_PROMPT=0 COREPACK_ENABLE_STRICT=0 corepack pnpm@10 --filter ctx7 --filter @upstash/context7-sdk --filter @upstash/context7-pi run test` exit 0 [slow] — after: T1.1.1 — est: 0.5h — evidence: —
+  Note: tools-ai-sdk is left out because its 4 live tests need paid keys (T1.1.3). The mcp tests run through pnpm exec because the package's own test script calls pnpm again, and pnpm is not on this Mac's PATH (whether pnpm exposes itself to scripts was not checked). If the c7-test log shows a cli, sdk or pi test that needs network, narrow this criterion and record why.
+- [ ] T1.1.3 The live tools-ai-sdk suite passes with OPENROUTER_API_KEY and CONTEXT7_API_KEY set (paid LLM calls and keyed Context7 calls), or Diego rules it out of scope — label: Live tools-ai-sdk tests pass — AC: Diego approves on <date> — evidence: —
+- [ ] T1.1.4 Context7 runs on this Mac in the form T4.1.1 chose and answers one live library lookup; registering it in ~/.claude.json is a class B write — label: Context7 runs on this Mac — AC: Diego approves on <date> — after: T4.1.1 — evidence: —
+
+## I2 — Test stage (w 1) — outcome: every class of test the stack warrants has a runnable criterion
+### E2.1 — Criterion classes (w 1) — done when: each task's criterion passes
+- [-] T2.1.1 Error paths of an area — dropped 2026-11-04: not applicable: a forked library; upstream owns its error-path tests and T1.1.2 runs them
