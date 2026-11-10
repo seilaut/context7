@@ -24,10 +24,10 @@ was to bring the score below 63 (HIGH threshold).
 | Pass 1 | `pnpm audit --fix` (lockfile overrides) | 100 | CRITICAL | ~608 (lockfile expanded) |
 | Pass 2 | Manual `pnpm.overrides` added to package.json (never applied; see section 2) | 100 | CRITICAL | 608 |
 | Pass 3+4 | Truncation guard + npx pin + selective baseline | **0** | **LOW** | **0** (518 suppressed) |
-| Pass 5 | HIGH-1: isNaN truncation fix; HIGH-2: templates.ts npx pin + GITHUB_RAW_URLS fork; MEDIUM-2: minimatch floor >=3.0.8 | 69 | HIGH | 5900 (regression: node_modules fingerprints invalidated by pnpm install) |
+| Pass 5 | HIGH-1: isNaN truncation fix; HIGH-2: templates.ts npx pin + GITHUB_RAW_URLS fork; MEDIUM-2: minimatch floor >=3.0.8 (package.json override; never recorded in the lockfile, see section 6) | 69 | HIGH | 5900 (regression: node_modules fingerprints invalidated by pnpm install) |
 | Pass 6 | Re-scope baseline to `skills/` (node_modules excluded); 21 suppressions | **0** | **LOW** | **0** (21 suppressed) |
 
-**Current state:** ✅ Score 0/LOW — target < 63 achieved. Baseline in `skills/.skillspector-baseline.yaml`.
+**State at Pass 6 (2026-10-14 measurement, before T3.5.2, not re-run since):** Score 0/LOW, target < 63, with 21 suppressions in `skills/.skillspector-baseline.yaml`. T3.5.2 later changed the content behind 18 of those 21 fingerprints, and SkillSpector is not installed on this Mac, so the current score is not known.
 
 ---
 
@@ -47,8 +47,8 @@ block. These are the overrides pnpm applies. They cover:
 ### 2. Manual pnpm.overrides (Pass 2) — never took effect, since removed
 
 Added explicit floor versions to `package.json` under `pnpm.overrides` for the subset of packages
-identified in the B1 reconnaissance as most critical. pnpm did not apply them: the lockfile's
-`overrides:` block holds only the `pnpm-workspace.yaml` entries, and none of these seven appear in it.
+identified in the B1 reconnaissance as most critical. They are not recorded in the lockfile: the lockfile's
+`overrides:` block holds only the `pnpm-workspace.yaml` entries, and none of these seven entries is recorded there; `undici` and `path-to-regexp` appear only with different ranges.
 The block was removed from `package.json` (T3.5.4, commit `60187e5`). Historical content:
 
 ```json
@@ -104,7 +104,14 @@ T3.5.2 (audit H2) replaced it with the exact CLI version from `packages/cli/pack
 
 The pin must be updated on each CLI release (`packages/cli/package.json` is the source of the version).
 
-**Location:** `packages/mcp/src/lib/auth/auth-prompt.ts`, lines 22-23.
+**Location:** `packages/mcp/src/lib/auth/auth-prompt.ts`, lines 24-25.
+
+**Still open (audit H2 point 3):** `ctx7 setup --mcp --stdio` writes an unpinned `npx -y @upstash/context7-mcp`
+entry (`packages/cli/src/setup/agents.ts`, `mcp-writer.ts`), and replaces an existing entry that does not name
+that package, which includes a fork build. This is not fixed.
+
+**Upgrade commands are deliberately `@latest`** (stated 2026-11-10): `packages/cli/src/commands/upgrade.ts` and
+`packages/cli/src/utils/update-check.ts` show `ctx7@latest` so that a user can upgrade. They were not changed.
 
 ### 5. templates.ts npx Pin + Fork URL (Pass 5 — HIGH-2 fix)
 
@@ -113,8 +120,17 @@ text written by `ctx7 setup`. Pass 5 closes this:
 
 - All three `npx ctx7@latest` occurrences in `FALLBACK_CLI` replaced with `npx ctx7@0.6.1`
   (the exact version pinned in `packages/cli/package.json`).
-- `GITHUB_RAW_URLS` updated from `upstash/context7` to `seilaut/context7` so live installs
-  fetch rule files from the fork, not upstream.
+- `GITHUB_RAW_URLS` updated from `upstash/context7` to `seilaut/context7` (commit 0321c7b), so a CLI
+  built from this fork fetches rule files (`rules/<name>`) and `skills/find-docs/SKILL.md` /
+  `skills/context7-mcp/SKILL.md` from the fork.
+
+**Reach of the pins (checked 2026-11-10):** `npm view ctx7@0.6.1` shows it was published on 2026-10-13 from
+`upstash/context7` (repository URL; release commit 103b2d4, an ancestor of 0321c7b, so it predates the
+fork's URL change). `npx ctx7@0.6.1 setup` therefore runs upstream's build, which fetches upstream's
+rule and skill files from upstash master, and those say `npx ctx7@latest`. The pins in this fork's `skills/`,
+`rules/`, `plugins/` and `auth-prompt.ts` protect agents that load those files directly. Only a CLI built
+from this fork fetches the fork's files. `fetchSetupSkillFiles` accepts only `find-docs` and `context7-mcp`,
+so the CLI never downloads `skills/context7-cli/SKILL.md`.
 
 **Location:** `packages/cli/src/setup/templates.ts`, lines 3-6 and 26-35.
 
@@ -139,14 +155,14 @@ security baseline because: (a) pnpm's zero-byte task-state files block fingerpri
 (b) node_modules CVE coverage is owned by `pnpm audit`, not SkillSpector, and (c) the real threat
 surface for an MCP server is the skill instructions and code, not build dependencies.
 
-**Final score (Pass 6):** `score: 0, severity: LOW` — 0 active findings, 21 suppressed in
-`skills/.skillspector-baseline.yaml`. Well below the 63/HIGH threshold.
+**Pass 6 measurement (2026-10-14, before T3.5.2, not re-run):** `score: 0, severity: LOW` — 0 active findings, 21 suppressed in
+`skills/.skillspector-baseline.yaml`.
 
 ---
 
 ## False Positive Classifications
 
-21 findings are suppressed in `skills/.skillspector-baseline.yaml` (Pass 6 scope). They fall into these categories:
+21 findings are suppressed in `skills/.skillspector-baseline.yaml` (Pass 6 scope). The categories A-D below describe the old whole-repo baseline (518 entries, Pass 3+4), not the current 21. The current 21 are 18 RP1 (17 in `find-docs/SKILL.md`, 1 in `context7-cli/SKILL.md`), in the two files that carried the `npx ctx7@latest` references (not verified that these findings are about those references), and 3 EA2 in `skills/context7-cli/references/setup.md`. I have not verified what EA2 stands for or which lines the 3 EA2 hashes match; that file documents `ctx7 setup`, including writing to `~/.claude/skills` and `--yes` to skip confirmation prompts. All 21 carry the reason "Accepted finding (auto-generated baseline)". The old categories were:
 
 ### Category A — Documentation Content (largest group)
 
@@ -204,13 +220,13 @@ shipped to end users and are not executed by an LLM agent.
 
 ### Category E — Skill Config Files
 
-Findings in `skills/`, `plugins/`, `rules/context7-cli.md`, and `skills/find-docs/SKILL.md`
-contained `npx ctx7@latest` references in agent rule files, which SkillSpector flags as unpinned.
-These were accepted as false positives in Pass 6, but they were real: the live `ctx7 setup` path
-downloads `rules/context7-cli.md` and `skills/find-docs/SKILL.md` from the fork. T3.5.2 (audit H2)
-pinned them, and the MCP auth prompt, to `ctx7@0.6.1`, the version in `packages/cli/package.json`.
-SkillSpector has not been re-run since (it is not installed on this Mac), so the 21 baseline
-fingerprints have not been re-checked against the changed files.
+`skills/`, `rules/context7-cli.md` and `skills/find-docs/SKILL.md` contained `npx ctx7@latest` references
+in agent rule files, which SkillSpector flags as unpinned. These were accepted as false positives in
+Pass 6, but they were real. T3.5.2 (audit H2) pinned them, and the MCP auth prompt and the two plugin
+READMEs, to `ctx7@0.6.1`, the version in `packages/cli/package.json`. These pins reach agents that load
+this fork's files directly. They do not reach `ctx7 setup` run through npm/npx, which installs upstream's
+content (see section 5). SkillSpector has not been re-run since (it is not installed on this Mac), so the
+21 baseline fingerprints have not been re-checked against the changed files.
 
 Note: `packages/cli/src/setup/templates.ts` previously also fell into this category. Pass 5
 (HIGH-2 fix) pinned those references to `ctx7@0.6.1` directly in source; they are no longer
@@ -258,5 +274,6 @@ git merge upstream/master
 # Run from the fork root (skillspector must be on PATH)
 skillspector scan skills/ --no-llm --format json --use-shipped-baseline --output /tmp/verify.json
 jq '{score: .risk_assessment.score, severity: .risk_assessment.severity, active: (.issues | length), suppressed: .suppressed_count}' /tmp/verify.json
-# Expected: score 0, severity LOW, active 0, suppressed 21
+# Pass 6 result (before T3.5.2, not re-run): score 0, severity LOW, active 0, suppressed 21.
+# The skills/ content changed in T3.5.2, so a fresh run may differ and the baseline may need regenerating.
 ```
