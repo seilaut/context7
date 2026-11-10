@@ -92,14 +92,17 @@ return { data: truncated, outcome: "success" };
 ### 4. MCP Version Pin in auth-prompt.ts (Pass 4)
 
 The `auth-prompt.ts` file contained unpinned `npx ctx7` references in the prompt message shown to
-unauthenticated users. These were pinned to the major version:
+unauthenticated users. Pass 4 pinned them to `ctx7@0`, which is a range (any 0.x release), not a pin.
+T3.5.2 (audit H2) replaced it with the exact CLI version from `packages/cli/package.json`:
 
 ```typescript
 // Before:
 `npx ctx7 setup ${flag} --mcp${transportFlag} -y`
 // After:
-`npx ctx7@0 setup ${flag} --mcp${transportFlag} -y`
+`npx ctx7@0.6.1 setup ${flag} --mcp${transportFlag} -y`
 ```
+
+The pin must be updated on each CLI release (`packages/cli/package.json` is the source of the version).
 
 **Location:** `packages/mcp/src/lib/auth/auth-prompt.ts`, lines 22-23.
 
@@ -202,9 +205,12 @@ shipped to end users and are not executed by an LLM agent.
 ### Category E — Skill Config Files
 
 Findings in `skills/`, `plugins/`, `rules/context7-cli.md`, and `skills/find-docs/SKILL.md`
-contain `npx ctx7@latest` references in agent rule files. These use `@latest` which SkillSpector
-flags as unpinned. In the context of these being operator-written rules (not server-generated
-text), this is an acceptable FP. The MCP server itself now pins to `@0`.
+contained `npx ctx7@latest` references in agent rule files, which SkillSpector flags as unpinned.
+These were accepted as false positives in Pass 6, but they were real: the live `ctx7 setup` path
+downloads `rules/context7-cli.md` and `skills/find-docs/SKILL.md` from the fork. T3.5.2 (audit H2)
+pinned them, and the MCP auth prompt, to `ctx7@0.6.1`, the version in `packages/cli/package.json`.
+SkillSpector has not been re-run since (it is not installed on this Mac), so the 21 baseline
+fingerprints have not been re-checked against the changed files.
 
 Note: `packages/cli/src/setup/templates.ts` previously also fell into this category. Pass 5
 (HIGH-2 fix) pinned those references to `ctx7@0.6.1` directly in source; they are no longer

@@ -7,16 +7,16 @@ description: Use the ctx7 CLI to fetch library documentation and configure Conte
 
 The Context7 CLI does two things: fetches up-to-date library documentation and sets up Context7 MCP for your editor.
 
-Make sure the CLI is up to date before running commands:
+Install the CLI version this skill ships with (the pin is updated on each CLI release):
 
 ```bash
-npm install -g ctx7@latest
+npm install -g ctx7@0.6.1
 ```
 
-Or run directly without installing:
+Or run it directly without installing (same pinned version):
 
 ```bash
-npx ctx7@latest <command>
+npx ctx7@0.6.1 <command>
 ```
 
 ## What this skill covers
